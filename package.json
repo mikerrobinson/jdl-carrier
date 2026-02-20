@@ -1,0 +1,25 @@
+{
+  "name": "jdl-shipping-rates",
+  "version": "1.0.0",
+  "description": "Shopify carrier service for JDL aviation coatings - hazmat shipping via FedEx",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "seed-kv": "npx tsx scripts/seed-kv.ts",
+    "seed-kv:prod": "npx tsx scripts/seed-kv.ts --env production"
+  },
+  "dependencies": {
+    "hono": "^4.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "@types/node": "^25.3.0",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "wrangler": "^3.57.0"
+  }
+}
