@@ -218,6 +218,34 @@ function fedExRatesToShopifyRates(
   return rates;
 }
 
+const TEST_SKU = 'TEST-SHIPPING';
+const TEST_PROPERTY_KEY = '_test_mode';
+
+function hasTestTrigger(items: ShopifyRateRequest['rate']['items']): boolean {
+  for (const item of items) {
+    if (item.sku?.toUpperCase() === TEST_SKU) {
+      return true;
+    }
+    if (item.properties?.[TEST_PROPERTY_KEY] === 'true') {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function handleTestRateRequest(
+  c: Context<{ Bindings: Env }>
+): Response {
+  const testMode = c.req.query('test') === 'true';
+
+  if (!testMode) {
+    return c.json({ error: 'GET only allowed with ?test=true' }, 405);
+  }
+
+  console.log('Test mode (GET) - returning dummy rates');
+  return c.json({ rates: buildTestRates() }, 200);
+}
+
 function buildTestRates(): ShopifyRate[] {
   const today = new Date();
   const groundDelivery = addBusinessDays(today, 5);
@@ -256,7 +284,7 @@ function buildTestRates(): ShopifyRate[] {
 }
 
 export async function handleRateRequest(
-  c: Context<{ Bindings: Env; Variables: { rawBody: string } }>
+  c: Context<{ Bindings: Env }>
 ): Promise<Response> {
   const testMode = c.req.query('test') === 'true';
 
@@ -268,14 +296,18 @@ export async function handleRateRequest(
   let request: ShopifyRateRequest;
 
   try {
-    const rawBody = c.get('rawBody');
-    request = JSON.parse(rawBody) as ShopifyRateRequest;
+    request = await c.req.json<ShopifyRateRequest>();
   } catch (error) {
     console.error('Failed to parse request body', error);
     return c.json({ rates: [] }, 200);
   }
 
   const items = request.rate.items;
+
+  if (hasTestTrigger(items)) {
+    console.log('Test mode triggered by cart item (SKU or property)');
+    return c.json({ rates: buildTestRates() }, 200);
+  }
 
   if (!hasShippableItems(items)) {
     return c.json({ rates: [] }, 200);

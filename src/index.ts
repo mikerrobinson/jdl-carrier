@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from './types';
-import { verifyShopifyHmac } from './middleware/hmac';
-import { handleRateRequest } from './handlers/rates';
+import { handleRateRequest, handleTestRateRequest } from './handlers/rates';
 
 const app = new Hono<{ Bindings: Env; Variables: { rawBody: string } }>();
 
@@ -9,7 +8,8 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.post('/rates', verifyShopifyHmac, handleRateRequest);
+app.get('/rates', handleTestRateRequest);
+app.post('/rates', handleRateRequest);
 
 app.onError((err, c) => {
   console.error('Unhandled error', {

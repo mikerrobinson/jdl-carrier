@@ -9,6 +9,11 @@ SHOPIFY_SHARED_SECRET = "your-shopify-shared-secret-here"
 binding = "JDL_CONFIG"
 id = "b17376c37a5641bebb48927a3409c6f5"
 
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Secrets (set via `wrangler secret put`):
 # - FEDEX_CLIENT_ID
 # - FEDEX_CLIENT_SECRET
