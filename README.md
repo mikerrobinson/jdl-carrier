@@ -127,14 +127,14 @@ curl -X POST "https://YOUR-STORE.myshopify.com/admin/api/2024-01/carrier_service
 
 All configuration is stored in Cloudflare KV under the `JDL_CONFIG` namespace:
 
-| Key | Description |
-|-----|-------------|
-| `zip_codes:local_delivery` | JSON array of local delivery zip codes |
-| `config:shipper_address` | JDL warehouse address for FedEx |
-| `config:box_sizes` | Box configurations for packing algorithm |
-| `config:handling_fees` | Ground and air handling fees |
-| `config:lead_times` | SKU-specific fulfillment lead times |
-| `config:priority_fee` | Priority handling surcharge (cents) |
+| Key                        | Description                              |
+| -------------------------- | ---------------------------------------- |
+| `zip_codes:local_delivery` | JSON array of local delivery zip codes   |
+| `config:shipper_address`   | JDL warehouse address for FedEx          |
+| `config:box_sizes`         | Box configurations for packing algorithm |
+| `config:handling_fees`     | Ground and air handling fees             |
+| `config:lead_times`        | SKU-specific fulfillment lead times      |
+| `config:priority_fee`      | Priority handling surcharge (cents)      |
 
 ## Routing Logic
 
@@ -146,9 +146,11 @@ All configuration is stored in Cloudflare KV under the `JDL_CONFIG` namespace:
 ## API Endpoints
 
 ### `POST /rates`
+
 Shopify carrier service callback. Requires `X-Shopify-Hmac-Sha256` header for authentication.
 
 ### `GET /health`
+
 Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
 
 ## Project Structure
@@ -158,8 +160,6 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
   index.ts                 # Hono app entry point
   /handlers
     rates.ts               # Main rate handler
-  /middleware
-    hmac.ts                # Shopify HMAC verification
   /services
     fedex.ts               # FedEx OAuth + Rate API
     packaging.ts           # Box packing algorithm

@@ -306,6 +306,7 @@ export async function handleRateRequest(
 
   if (hasTestTrigger(items)) {
     console.log('Test mode triggered by cart item (SKU or property)');
+    console.log('Full Shopify payload:', JSON.stringify(request, null, 2));
     return c.json({ rates: buildTestRates() }, 200);
   }
 
