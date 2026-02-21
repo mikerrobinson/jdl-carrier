@@ -71,9 +71,11 @@ describe('packItems', () => {
   });
 
   it('packs multiple items that fit in one box', () => {
+    // With 80% fill factor, small box effective capacity: (20-1)*0.8 = 15.2 lbs
+    // Items: 2*2lb + 3*1lb = 7 lbs - should fit in small box
     const items = [
-      createCartItem({ grams: 2000, quantity: 2 }),
-      createCartItem({ grams: 1000, quantity: 3 }),
+      createCartItem({ grams: Math.round(2 * GRAMS_PER_LB), quantity: 2 }),
+      createCartItem({ grams: Math.round(1 * GRAMS_PER_LB), quantity: 3 }),
     ];
     const packed = packItems(items, TEST_BOX_CONFIGS);
 
@@ -116,10 +118,14 @@ describe('packItems', () => {
   });
 
   it('efficiently packs items using first-fit decreasing', () => {
+    // With 80% fill factor, effective capacities are:
+    // small: (20-1)*0.8 = 15.2 lbs, medium: (40-2)*0.8 = 30.4 lbs, large: (70-3)*0.8 = 53.6 lbs
+    // Items: 15 + 10 + 5 + 3 = 33 lbs total
+    // Should fit in 2 boxes (e.g., large + small, or medium + medium)
     const items = [
-      createCartItem({ grams: Math.round(15 * GRAMS_PER_LB), quantity: 1 }),
+      createCartItem({ grams: Math.round(12 * GRAMS_PER_LB), quantity: 1 }),
       createCartItem({ grams: Math.round(3 * GRAMS_PER_LB), quantity: 1 }),
-      createCartItem({ grams: Math.round(10 * GRAMS_PER_LB), quantity: 1 }),
+      createCartItem({ grams: Math.round(8 * GRAMS_PER_LB), quantity: 1 }),
       createCartItem({ grams: Math.round(5 * GRAMS_PER_LB), quantity: 1 }),
     ];
     const packed = packItems(items, TEST_BOX_CONFIGS);

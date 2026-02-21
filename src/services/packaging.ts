@@ -1,5 +1,13 @@
-import type { BoxConfig, ShopifyCartItem, FedExPackageLineItem } from '../types';
-import { GRAMS_PER_LB, DEFAULT_BOX_CONFIGS } from '../config/constants';
+import type {
+  BoxConfig,
+  ShopifyCartItem,
+  FedExPackageLineItem,
+} from "../types";
+import { GRAMS_PER_LB, DEFAULT_BOX_CONFIGS } from "../config/constants";
+
+// Safety factor: only fill boxes to 90% capacity to account for
+// volumetric constraints not captured by weight alone
+const BOX_FILL_PERCENTAGE = 0.9;
 
 export interface PackedBox {
   box: BoxConfig;
@@ -17,19 +25,25 @@ export function calculateTotalCartWeightLbs(items: ShopifyCartItem[]): number {
   }, 0);
 }
 
+function getEffectiveCapacity(box: BoxConfig): number {
+  return (box.maxWeightLbs - box.emptyWeightLbs) * BOX_FILL_PERCENTAGE;
+}
+
 export function packItems(
   items: ShopifyCartItem[],
-  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS
+  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS,
 ): PackedBox[] {
   if (items.length === 0) {
     return [];
   }
 
   if (boxConfigs.length === 0) {
-    throw new Error('No box configurations available');
+    throw new Error("No box configurations available");
   }
 
-  const boxesByCapacityAsc = [...boxConfigs].sort((a, b) => a.maxWeightLbs - b.maxWeightLbs);
+  const boxesByCapacityAsc = [...boxConfigs].sort(
+    (a, b) => a.maxWeightLbs - b.maxWeightLbs,
+  );
   const largestBox = boxesByCapacityAsc[boxesByCapacityAsc.length - 1];
 
   const itemWeights: number[] = [];
@@ -48,7 +62,8 @@ export function packItems(
     let placed = false;
 
     for (const packedBox of packedBoxes) {
-      const availableCapacity = packedBox.box.maxWeightLbs - packedBox.totalWeightLbs;
+      const effectiveCapacity = getEffectiveCapacity(packedBox.box);
+      const availableCapacity = effectiveCapacity - packedBox.itemWeightLbs;
       if (itemWeight <= availableCapacity) {
         packedBox.itemWeightLbs += itemWeight;
         packedBox.totalWeightLbs += itemWeight;
@@ -59,7 +74,7 @@ export function packItems(
 
     if (!placed) {
       const suitableBox = boxesByCapacityAsc.find(
-        (box) => itemWeight <= box.maxWeightLbs - box.emptyWeightLbs
+        (box) => itemWeight <= getEffectiveCapacity(box),
       );
 
       if (!suitableBox) {
@@ -81,17 +96,19 @@ export function packItems(
   return packedBoxes;
 }
 
-export function packedBoxesToFedExPackages(packedBoxes: PackedBox[]): FedExPackageLineItem[] {
+export function packedBoxesToFedExPackages(
+  packedBoxes: PackedBox[],
+): FedExPackageLineItem[] {
   return packedBoxes.map((packed) => ({
     weight: {
-      units: 'LB',
+      units: "LB",
       value: Math.round(packed.totalWeightLbs * 100) / 100,
     },
     dimensions: {
       length: packed.box.length,
       width: packed.box.width,
       height: packed.box.height,
-      units: 'IN',
+      units: "IN",
     },
     groupPackageCount: 1,
   }));
@@ -99,7 +116,7 @@ export function packedBoxesToFedExPackages(packedBoxes: PackedBox[]): FedExPacka
 
 export function getPackagesForCart(
   items: ShopifyCartItem[],
-  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS
+  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS,
 ): FedExPackageLineItem[] {
   const shippableItems = items.filter((item) => item.requires_shipping);
 
