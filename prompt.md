@@ -259,7 +259,6 @@ Worker name: jdl-shipping-rates
 Compatibility date: current
 KV namespace binding for JDL_CONFIG
 Secret placeholders for FEDEX_CLIENT_ID, FEDEX_CLIENT_SECRET, FEDEX_ACCOUNT_NUMBER
-A [vars] section for non-secret config like SHOPIFY_SHARED_SECRET (for verifying Shopify's HMAC signature on incoming requests — implement HMAC verification middleware)
 
 Deliverables
 

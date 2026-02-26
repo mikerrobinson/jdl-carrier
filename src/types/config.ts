@@ -30,5 +30,4 @@ export interface Env {
   FEDEX_CLIENT_ID: string;
   FEDEX_CLIENT_SECRET: string;
   FEDEX_ACCOUNT_NUMBER: string;
-  SHOPIFY_SHARED_SECRET: string;
 }

@@ -53,8 +53,6 @@ npx wrangler secret put FEDEX_CLIENT_SECRET
 npx wrangler secret put FEDEX_ACCOUNT_NUMBER
 ```
 
-Update the `SHOPIFY_SHARED_SECRET` in `wrangler.toml` `[vars]` section (or use `wrangler secret put` for production).
-
 ### 4. Seed KV Configuration
 
 ```bash
