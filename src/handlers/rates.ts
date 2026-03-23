@@ -8,7 +8,12 @@ import type {
   ParsedFedExRate,
   FedExPackageLineItem,
 } from "../types";
-import { getConfig, type AppConfig } from "../config/config";
+import {
+  LOCAL_DELIVERY_ZIPS,
+  BOX_CONFIGS,
+  HANDLING_FEES,
+  PRIORITY_FEE_CENTS,
+} from "../config";
 import { determineRoute, hasShippableItems } from "../services/routing";
 import { getPackagesForCart } from "../services/packaging";
 import {
@@ -78,21 +83,19 @@ function buildFreightForwardingRate(): ShopifyRate {
   };
 }
 
-function buildRecipientAddress(request: ShopifyRateRequest): FedExAddress {
-  const dest = request.rate.destination;
+function shopifyAddressToFedEx(address: ShopifyRateRequest["rate"]["origin"]): FedExAddress {
   return {
-    streetLines: [dest.address1, dest.address2].filter(Boolean),
-    city: dest.city,
-    stateOrProvinceCode: dest.province,
-    postalCode: dest.postal_code,
-    countryCode: dest.country,
+    streetLines: [address.address1, address.address2].filter(Boolean),
+    city: address.city,
+    stateOrProvinceCode: address.province,
+    postalCode: address.postal_code,
+    countryCode: address.country,
   };
 }
 
 function fedExRatesToShopifyRates(
   fedExRates: ParsedFedExRate[],
   request: ShopifyRateRequest,
-  config: AppConfig,
   defaultHandlingDays: number,
 ): ShopifyRate[] {
   const rates: ShopifyRate[] = [];
@@ -101,8 +104,8 @@ function fedExRatesToShopifyRates(
   for (const fedExRate of fedExRates) {
     const isGround = isGroundService(fedExRate.serviceType);
     const handlingFee = isGround
-      ? config.handlingFees.ground_per_order * 100
-      : config.handlingFees.air_per_order * 100;
+      ? HANDLING_FEES.ground_per_order * 100
+      : HANDLING_FEES.air_per_order * 100;
 
     const totalPriceCents = fedExRate.totalChargeCents + handlingFee;
 
@@ -129,7 +132,7 @@ function fedExRatesToShopifyRates(
       true,
     );
 
-    const priorityTotalCents = totalPriceCents + config.priorityFeeCents;
+    const priorityTotalCents = totalPriceCents + PRIORITY_FEE_CENTS;
 
     rates.push({
       service_name: `${fedExRate.serviceName} — Priority Handling`,
@@ -346,9 +349,7 @@ export async function handleRateRequest(
     return c.json({ rates: [] }, 200);
   }
 
-  const config = getConfig();
-
-  const route = determineRoute(request, config.localDeliveryZips);
+  const route = determineRoute(request, LOCAL_DELIVERY_ZIPS);
 
   console.log("Rate request routing decision", {
     destinationZip: request.rate.destination.postal_code,
@@ -369,7 +370,7 @@ export async function handleRateRequest(
   }
 
   try {
-    const packages = getPackagesForCart(items, config.boxConfigs);
+    const packages = getPackagesForCart(items, BOX_CONFIGS);
 
     if (packages.length === 0) {
       return c.json({ rates: [] }, 200);
@@ -388,11 +389,12 @@ export async function handleRateRequest(
       // Production mode: call real FedEx API
       const accessToken = await getFedExAccessToken(c.env);
 
-      const recipientAddress = buildRecipientAddress(request);
+      const shipperAddress = shopifyAddressToFedEx(request.rate.origin);
+      const recipientAddress = shopifyAddressToFedEx(request.rate.destination);
 
       const includeHazmat = hasHazmatItems(items);
       const rateRequest = buildFedExRateRequest(
-        config.shipperAddress,
+        shipperAddress,
         recipientAddress,
         packages,
         c.env.FEDEX_ACCOUNT_NUMBER,
@@ -437,7 +439,6 @@ export async function handleRateRequest(
     const shopifyRates = fedExRatesToShopifyRates(
       parsedRates,
       request,
-      config,
       defaultHandlingDays,
     );
 

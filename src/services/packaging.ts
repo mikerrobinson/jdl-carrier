@@ -3,8 +3,7 @@ import type {
   ShopifyCartItem,
   FedExPackageLineItem,
 } from "../types";
-import { GRAMS_PER_LB } from "../config/constants";
-import { BOX_CONFIGS } from "../config/config";
+import { GRAMS_PER_LB, BOX_CONFIGS } from "../config";
 
 // Safety factor for weight capacity
 const WEIGHT_FILL_PERCENTAGE = 0.9;

@@ -113,15 +113,16 @@ curl -X POST "https://jdl-industries-inc-aviation.myshopify.com/admin/api/2024-0
 
 ## Configuration
 
-All configuration is stored in `src/config/config.ts`:
+All configuration is stored in `src/config.ts`:
 
 | Export                | Description                                    |
 | --------------------- | ---------------------------------------------- |
 | `LOCAL_DELIVERY_ZIPS` | Set of Miami-Dade and Broward County zip codes |
-| `SHIPPER_ADDRESS`     | JDL warehouse address for FedEx                |
 | `BOX_CONFIGS`         | Box configurations for packing algorithm       |
 | `HANDLING_FEES`       | Ground and air handling fees                   |
 | `PRIORITY_FEE_CENTS`  | Priority handling surcharge (cents)            |
+
+Note: The shipper address is automatically taken from the `origin` field in Shopify's rate request.
 
 ## Routing Logic
 
@@ -145,6 +146,7 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
 ```
 /src
   index.ts                 # Hono app entry point
+  config.ts                # App configuration (fees, zip codes, FedEx settings)
   /handlers
     rates.ts               # Main rate handler
   /services
@@ -157,9 +159,6 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
     shopify.ts             # Shopify types
     fedex.ts               # FedEx API types
     config.ts              # Configuration types
-  /config
-    config.ts              # App configuration (addresses, fees, zip codes)
-    constants.ts           # Service codes, defaults
 ```
 
 ## Handling Fees

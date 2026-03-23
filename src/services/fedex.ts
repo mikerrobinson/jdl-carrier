@@ -6,17 +6,15 @@ import type {
   FedExPackageLineItem,
   FedExAddress,
   ParsedFedExRate,
-  ShipperAddress,
 } from "../types";
 import {
-  getFedExOAuthEndpoint,
-  getFedExRateEndpoint,
   FEDEX_TOKEN_EXPIRY_BUFFER_SECONDS,
   FEDEX_API_TIMEOUT_MS,
   ALL_ALLOWED_SERVICES,
   GROUND_SERVICE_SET,
   SERVICE_DISPLAY_NAMES,
-} from "../config/constants";
+  getFedExApiBase,
+} from "../config";
 
 interface CachedToken {
   accessToken: string;
@@ -33,7 +31,7 @@ export async function getFedExAccessToken(env: Env): Promise<string> {
     return tokenCache.accessToken;
   }
 
-  const oauthEndpoint = getFedExOAuthEndpoint(useSandbox);
+  const oauthEndpoint = `${getFedExApiBase(useSandbox)}/oauth/token`;
 
   const response = await fetch(oauthEndpoint, {
     method: "POST",
@@ -64,7 +62,7 @@ export async function getFedExAccessToken(env: Env): Promise<string> {
 }
 
 export function buildFedExRateRequest(
-  shipperAddress: ShipperAddress,
+  shipperAddress: FedExAddress,
   recipientAddress: FedExAddress,
   packages: FedExPackageLineItem[],
   accountNumber: string,
@@ -143,7 +141,7 @@ export async function callFedExRateAPI(
 ): Promise<FedExRateResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FEDEX_API_TIMEOUT_MS);
-  const rateEndpoint = getFedExRateEndpoint(useSandbox);
+  const rateEndpoint = `${getFedExApiBase(useSandbox)}/rate/v1/rates/quotes`;
 
   try {
     const response = await fetch(rateEndpoint, {

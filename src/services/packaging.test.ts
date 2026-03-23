@@ -7,7 +7,7 @@ import {
   getPackagesForCart,
 } from "./packaging";
 import type { ShopifyCartItem, BoxConfig } from "../types";
-import { GRAMS_PER_LB } from "../config/constants";
+import { GRAMS_PER_LB } from "../config";
 
 const TEST_BOX_CONFIGS: BoxConfig[] = [
   {
