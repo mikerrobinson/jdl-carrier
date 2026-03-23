@@ -1,6 +1,6 @@
-# JDL Shipping Rates - Shopify Carrier Service
+# JDL Carrier Rate Service
 
-A Cloudflare Worker that implements a Shopify carrier rate service to provide customm shipping rates for JDL's Shopify store. Handles hazardous materials, accounts for boxing using using the Fedex (Class 3, UN1263/UN1210) shipping via FedEx with proper dangerous goods declarations.
+A Cloudflare Worker that implements a Shopify carrier rate service to provide customm shipping rates for JDL's Shopify store.
 
 ## Features
 
@@ -8,7 +8,7 @@ A Cloudflare Worker that implements a Shopify carrier rate service to provide cu
 - **US Domestic Shipping**: FedEx Ground and Express services with negotiated rates
 - **International Military**: FedEx International services for military customers
 - **Freight Forwarding**: Placeholder rates for non-military international orders
-- **Dangerous Goods Handling**: All shipments flagged with proper DG parameters
+- **Dangerous Goods Handling**: All shipments flagged with proper Dangerous Goods (DG) parameters
 - **Priority Handling**: Optional expedited fulfillment for all FedEx services
 - **Dynamic Box Packing**: Greedy bin-packing algorithm for optimal packaging
 
@@ -33,11 +33,12 @@ npm install
 npx wrangler secret put FEDEX_CLIENT_ID
 npx wrangler secret put FEDEX_CLIENT_SECRET
 npx wrangler secret put FEDEX_ACCOUNT_NUMBER
+npx wrangler secret put FEDEX_SANDBOX ('true' to use Fedex sandbox APIs)
 ```
 
 ### 3. Update Configuration (if needed)
 
-Edit `src/config/config.ts` to update shipper address, box sizes, handling fees, or local delivery zip codes.
+Edit `src/config/config.ts` to update box sizes, handling fees, or local delivery zip codes.
 
 ## Development
 
@@ -45,17 +46,6 @@ Edit `src/config/config.ts` to update shipper address, box sizes, handling fees,
 
 ```bash
 npm run dev
-```
-
-This starts the worker at `http://localhost:8787`.
-
-### Test the Endpoint
-
-```bash
-curl -X POST http://localhost:8787/rates \
-  -H "Content-Type: application/json" \
-  -H "X-Shopify-Hmac-Sha256: $(echo -n '{"rate":...}' | openssl dgst -sha256 -hmac 'your-secret' -binary | base64)" \
-  -d '{"rate":{"origin":{},"destination":{"country":"US","postal_code":"90210","province":"CA","city":"Beverly Hills","name":"Test","address1":"123 Test St","address2":"","phone":""},"items":[{"name":"Test","sku":"TEST","quantity":1,"grams":1000,"price":5000,"vendor":"JDL","requires_shipping":true,"taxable":true,"fulfillment_service":"manual","properties":{},"product_id":1,"variant_id":1}],"currency":"USD","locale":"en"}}'
 ```
 
 ### Run Tests
@@ -119,10 +109,8 @@ All configuration is stored in `src/config.ts`:
 | --------------------- | ---------------------------------------------- |
 | `LOCAL_DELIVERY_ZIPS` | Set of Miami-Dade and Broward County zip codes |
 | `BOX_CONFIGS`         | Box configurations for packing algorithm       |
-| `HANDLING_FEES`       | Ground and air handling fees                   |
-| `PRIORITY_FEE_CENTS`  | Priority handling surcharge (cents)            |
-
-Note: The shipper address is automatically taken from the `origin` field in Shopify's rate request.
+| `HANDLING_FEES_CENTS` | Ground and air handling fees                   |
+| `PRIORITY_FEE_CENTS`  | Priority handling surcharge                    |
 
 ## Routing Logic
 
@@ -135,7 +123,7 @@ Note: The shipper address is automatically taken from the `origin` field in Shop
 
 ### `POST /rates`
 
-Shopify carrier service callback. Requires `X-Shopify-Hmac-Sha256` header for authentication.
+Shopify carrier service callback.
 
 ### `GET /health`
 

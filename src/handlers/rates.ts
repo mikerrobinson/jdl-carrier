@@ -11,7 +11,7 @@ import type {
 import {
   LOCAL_DELIVERY_ZIPS,
   BOX_CONFIGS,
-  HANDLING_FEES,
+  HANDLING_FEES_CENTS,
   PRIORITY_FEE_CENTS,
 } from "../config";
 import { determineRoute, hasShippableItems } from "../services/routing";
@@ -83,7 +83,9 @@ function buildFreightForwardingRate(): ShopifyRate {
   };
 }
 
-function shopifyAddressToFedEx(address: ShopifyRateRequest["rate"]["origin"]): FedExAddress {
+function shopifyAddressToFedEx(
+  address: ShopifyRateRequest["rate"]["origin"],
+): FedExAddress {
   return {
     streetLines: [address.address1, address.address2].filter(Boolean),
     city: address.city,
@@ -104,8 +106,8 @@ function fedExRatesToShopifyRates(
   for (const fedExRate of fedExRates) {
     const isGround = isGroundService(fedExRate.serviceType);
     const handlingFee = isGround
-      ? HANDLING_FEES.ground_per_order * 100
-      : HANDLING_FEES.air_per_order * 100;
+      ? HANDLING_FEES_CENTS.ground_per_order
+      : HANDLING_FEES_CENTS.air_per_order;
 
     const totalPriceCents = fedExRate.totalChargeCents + handlingFee;
 
