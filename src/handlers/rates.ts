@@ -4,20 +4,11 @@ import type {
   ShopifyRateRequest,
   ShopifyRate,
   ShopifyRateResponse,
-  BoxConfig,
-  ShipperAddress,
-  HandlingFees,
   FedExAddress,
   ParsedFedExRate,
   FedExPackageLineItem,
 } from "../types";
-import {
-  KV_KEYS,
-  DEFAULT_BOX_CONFIGS,
-  DEFAULT_SHIPPER_ADDRESS,
-  DEFAULT_HANDLING_FEES,
-  DEFAULT_PRIORITY_FEE_CENTS,
-} from "../config/constants";
+import { getConfig, type AppConfig } from "../config/config";
 import { determineRoute, hasShippableItems } from "../services/routing";
 import { getPackagesForCart } from "../services/packaging";
 import {
@@ -44,85 +35,6 @@ function hasHazmatItems(items: ShopifyCartItem[]): boolean {
     const hazmatProp = item.properties?._is_hazmat;
     return hazmatProp === "true";
   });
-}
-
-interface KVConfig {
-  localDeliveryZips: Set<string>;
-  shipperAddress: ShipperAddress;
-  boxConfigs: BoxConfig[];
-  handlingFees: HandlingFees;
-  priorityFeeCents: number;
-}
-
-async function loadKVConfig(kv: KVNamespace): Promise<KVConfig> {
-  const [
-    localZipsJson,
-    shipperAddressJson,
-    boxSizesJson,
-    handlingFeesJson,
-    priorityFeeJson,
-  ] = await Promise.all([
-    kv.get(KV_KEYS.LOCAL_DELIVERY_ZIPS),
-    kv.get(KV_KEYS.SHIPPER_ADDRESS),
-    kv.get(KV_KEYS.BOX_SIZES),
-    kv.get(KV_KEYS.HANDLING_FEES),
-    kv.get(KV_KEYS.PRIORITY_FEE),
-  ]);
-
-  let localDeliveryZips: Set<string>;
-  try {
-    const zipsArray = localZipsJson ? JSON.parse(localZipsJson) : [];
-    localDeliveryZips = new Set(zipsArray);
-  } catch {
-    console.warn("Failed to parse local delivery zips, using empty set");
-    localDeliveryZips = new Set();
-  }
-
-  let shipperAddress: ShipperAddress;
-  try {
-    shipperAddress = shipperAddressJson
-      ? JSON.parse(shipperAddressJson)
-      : DEFAULT_SHIPPER_ADDRESS;
-  } catch {
-    console.warn("Failed to parse shipper address, using default");
-    shipperAddress = DEFAULT_SHIPPER_ADDRESS;
-  }
-
-  let boxConfigs: BoxConfig[];
-  try {
-    boxConfigs = boxSizesJson ? JSON.parse(boxSizesJson) : DEFAULT_BOX_CONFIGS;
-  } catch {
-    console.warn("Failed to parse box sizes, using defaults");
-    boxConfigs = DEFAULT_BOX_CONFIGS;
-  }
-
-  let handlingFees: HandlingFees;
-  try {
-    handlingFees = handlingFeesJson
-      ? JSON.parse(handlingFeesJson)
-      : DEFAULT_HANDLING_FEES;
-  } catch {
-    console.warn("Failed to parse handling fees, using defaults");
-    handlingFees = DEFAULT_HANDLING_FEES;
-  }
-
-  let priorityFeeCents: number;
-  try {
-    priorityFeeCents = priorityFeeJson
-      ? parseInt(priorityFeeJson, 10)
-      : DEFAULT_PRIORITY_FEE_CENTS;
-  } catch {
-    console.warn("Failed to parse priority fee, using default");
-    priorityFeeCents = DEFAULT_PRIORITY_FEE_CENTS;
-  }
-
-  return {
-    localDeliveryZips,
-    shipperAddress,
-    boxConfigs,
-    handlingFees,
-    priorityFeeCents,
-  };
 }
 
 function getDefaultHandlingDays(env: Env): number {
@@ -180,7 +92,7 @@ function buildRecipientAddress(request: ShopifyRateRequest): FedExAddress {
 function fedExRatesToShopifyRates(
   fedExRates: ParsedFedExRate[],
   request: ShopifyRateRequest,
-  config: KVConfig,
+  config: AppConfig,
   defaultHandlingDays: number,
 ): ShopifyRate[] {
   const rates: ShopifyRate[] = [];
@@ -434,13 +346,7 @@ export async function handleRateRequest(
     return c.json({ rates: [] }, 200);
   }
 
-  let config: KVConfig;
-  try {
-    config = await loadKVConfig(c.env.JDL_CONFIG);
-  } catch (error) {
-    console.error("Failed to load KV config", error);
-    return c.json({ error: "Internal server error" }, 500);
-  }
+  const config = getConfig();
 
   const route = determineRoute(request, config.localDeliveryZips);
 

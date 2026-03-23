@@ -1,9 +1,4 @@
-import type {
-  BoxConfig,
-  HandlingFees,
-  LeadTimes,
-  ShipperAddress,
-} from "../types";
+import type { LeadTimes } from "../types";
 
 // FedEx API endpoints - use FEDEX_SANDBOX=true for test environment
 export const FEDEX_API_BASE_PRODUCTION = "https://apis.fedex.com";
@@ -71,51 +66,8 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   INTERNATIONAL_FIRST: "FedEx International First",
 };
 
-export const DEFAULT_SHIPPER_ADDRESS: ShipperAddress = {
-  streetLines: ["9500 Northwest 12th Street", "Unit 6"],
-  city: "Miami",
-  stateOrProvinceCode: "FL",
-  postalCode: "33172-2831",
-  countryCode: "US",
-};
-
-export const DEFAULT_BOX_CONFIGS: BoxConfig[] = [
-  {
-    name: "2-gallon",
-    length: 9,
-    width: 15,
-    height: 9,
-    maxWeightLbs: 30,
-    emptyWeightLbs: 2,
-  },
-  {
-    name: "4-gallon",
-    length: 15,
-    width: 15,
-    height: 9,
-    maxWeightLbs: 55,
-    emptyWeightLbs: 3,
-  },
-];
-
-export const DEFAULT_HANDLING_FEES: HandlingFees = {
-  ground_per_order: 30,
-  air_per_order: 125,
-};
-
 export const DEFAULT_LEAD_TIMES: LeadTimes = {
   default: 1,
 };
-
-export const DEFAULT_PRIORITY_FEE_CENTS = 3000;
-
-export const KV_KEYS = {
-  LOCAL_DELIVERY_ZIPS: "zip_codes:local_delivery",
-  SHIPPER_ADDRESS: "config:shipper_address",
-  BOX_SIZES: "config:box_sizes",
-  HANDLING_FEES: "config:handling_fees",
-  LEAD_TIMES: "config:lead_times",
-  PRIORITY_FEE: "config:priority_fee",
-} as const;
 
 export const GRAMS_PER_LB = 453.592;

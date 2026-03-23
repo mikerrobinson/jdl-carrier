@@ -27,25 +27,7 @@ A Cloudflare Worker that implements a Shopify carrier rate service to provide cu
 npm install
 ```
 
-### 2. Configure Wrangler
-
-Update `wrangler.toml` with your KV namespace IDs:
-
-```toml
-[[kv_namespaces]]
-binding = "JDL_CONFIG"
-id = "your-production-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
-```
-
-Create the KV namespace if needed:
-
-```bash
-npx wrangler kv:namespace create JDL_CONFIG
-npx wrangler kv:namespace create JDL_CONFIG --preview
-```
-
-### 3. Set Secrets
+### 2. Set Secrets
 
 ```bash
 npx wrangler secret put FEDEX_CLIENT_ID
@@ -53,19 +35,9 @@ npx wrangler secret put FEDEX_CLIENT_SECRET
 npx wrangler secret put FEDEX_ACCOUNT_NUMBER
 ```
 
-### 4. Seed KV Configuration
+### 3. Update Configuration (if needed)
 
-```bash
-# Seed preview/development KV
-npm run seed-kv
-
-# Seed production KV
-npm run seed-kv:prod
-```
-
-### 5. Update Shipper Address
-
-Edit the shipper address in `scripts/seed-kv.ts` to match JDL's warehouse address before seeding.
+Edit `src/config/config.ts` to update shipper address, box sizes, handling fees, or local delivery zip codes.
 
 ## Development
 
@@ -102,18 +74,36 @@ npm run test:run
 npm run deploy
 ```
 
-## Register Carrier Service with Shopify
+## Register an App and the Carrier Service with Shopify
+
+A Shopify app needs to be created and installed in the JDL store in order to get the admin api token needed to register this custom carrier service using the admin api. This is best done in the [Shopify dev dashboard](https://dev.shopify.com/dashboard). Use the "Start from Dev Dashboard" option and specify:
+
+- App name: JDL Custom Shipping
+- scope(s): write_shipping
+
+After creating the app, select the distribution method using the link in the right sidebar (opt for one store only). Then install the app in the JDL store.
+
+Once the app has been installed, fetch an admin api access token using the [client credential grant flow](https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/client-credentials-grant) as follows:
+
+```bash
+curl -X POST \
+  "https://jdl-industries-inc-aviation.myshopify.com/admin/oauth/access_token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" \
+  -d "client_id=CLIENT_ID_FROM_DEV_DASHBOARD" \
+  -d "client_secret=CLIENT_SECRET_FROM_DEV_DASHBOARD"
+```
 
 After deploying, register the carrier service with Shopify using the Admin API:
 
 ```bash
-curl -X POST "https://YOUR-STORE.myshopify.com/admin/api/2024-01/carrier_services.json" \
-  -H "X-Shopify-Access-Token: YOUR_ADMIN_API_TOKEN" \
+curl -X POST "https://jdl-industries-inc-aviation.myshopify.com/admin/api/2024-01/carrier_services.json" \
+  -H "X-Shopify-Access-Token: ADMIN_API_TOKEN_FROM_RESPONSE_ABOVE" \
   -H "Content-Type: application/json" \
   -d '{
     "carrier_service": {
-      "name": "JDL Shipping",
-      "callback_url": "https://carrier-rate-service.YOUR-SUBDOMAIN.workers.dev/rates",
+      "name": "JDL Custom Shipping",
+      "callback_url": "https://carrier-rate-service.jdlindustries.workers.dev/rates",
       "service_discovery": true,
       "carrier_service_type": "api",
       "format": "json"
@@ -123,16 +113,15 @@ curl -X POST "https://YOUR-STORE.myshopify.com/admin/api/2024-01/carrier_service
 
 ## Configuration
 
-All configuration is stored in Cloudflare KV under the `JDL_CONFIG` namespace:
+All configuration is stored in `src/config/config.ts`:
 
-| Key                        | Description                              |
-| -------------------------- | ---------------------------------------- |
-| `zip_codes:local_delivery` | JSON array of local delivery zip codes   |
-| `config:shipper_address`   | JDL warehouse address for FedEx          |
-| `config:box_sizes`         | Box configurations for packing algorithm |
-| `config:handling_fees`     | Ground and air handling fees             |
-| `config:lead_times`        | SKU-specific fulfillment lead times      |
-| `config:priority_fee`      | Priority handling surcharge (cents)      |
+| Export                | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `LOCAL_DELIVERY_ZIPS` | Set of Miami-Dade and Broward County zip codes |
+| `SHIPPER_ADDRESS`     | JDL warehouse address for FedEx                |
+| `BOX_CONFIGS`         | Box configurations for packing algorithm       |
+| `HANDLING_FEES`       | Ground and air handling fees                   |
+| `PRIORITY_FEE_CENTS`  | Priority handling surcharge (cents)            |
 
 ## Routing Logic
 
@@ -169,9 +158,8 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
     fedex.ts               # FedEx API types
     config.ts              # Configuration types
   /config
+    config.ts              # App configuration (addresses, fees, zip codes)
     constants.ts           # Service codes, defaults
-/scripts
-  seed-kv.ts               # KV seeding script
 ```
 
 ## Handling Fees

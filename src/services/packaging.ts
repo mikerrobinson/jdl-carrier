@@ -3,7 +3,8 @@ import type {
   ShopifyCartItem,
   FedExPackageLineItem,
 } from "../types";
-import { GRAMS_PER_LB, DEFAULT_BOX_CONFIGS } from "../config/constants";
+import { GRAMS_PER_LB } from "../config/constants";
+import { BOX_CONFIGS } from "../config/config";
 
 // Safety factor for weight capacity
 const WEIGHT_FILL_PERCENTAGE = 0.9;
@@ -142,7 +143,7 @@ function itemFitsInPackedBox(
 
 export function packItems(
   items: ShopifyCartItem[],
-  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS,
+  boxConfigs: BoxConfig[] = BOX_CONFIGS,
 ): PackedBox[] {
   if (items.length === 0) {
     return [];
@@ -239,7 +240,7 @@ export function packedBoxesToFedExPackages(
 
 export function getPackagesForCart(
   items: ShopifyCartItem[],
-  boxConfigs: BoxConfig[] = DEFAULT_BOX_CONFIGS,
+  boxConfigs: BoxConfig[] = BOX_CONFIGS,
 ): FedExPackageLineItem[] {
   const shippableItems = items.filter((item) => item.requires_shipping);
 

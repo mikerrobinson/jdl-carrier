@@ -26,7 +26,6 @@ export interface LeadTimes {
 }
 
 export interface Env {
-  JDL_CONFIG: KVNamespace;
   FEDEX_CLIENT_ID: string;
   FEDEX_CLIENT_SECRET: string;
   FEDEX_ACCOUNT_NUMBER: string;

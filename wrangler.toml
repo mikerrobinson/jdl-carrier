@@ -5,10 +5,6 @@ compatibility_date = "2024-05-29"
 [vars]
 DEFAULT_HANDLING_DAYS = "1"
 
-[[kv_namespaces]]
-binding = "JDL_CONFIG"
-id = "89596fafb87948c78a36320a517291a8"
-
 [observability]
 [observability.logs]
 enabled = true
