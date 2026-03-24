@@ -86,13 +86,6 @@ export function buildFedExRateRequest(
       }))
     : packages;
 
-  if (includeHazmat) {
-    console.log("Including hazmat in rate request", {
-      packageCount: packages.length,
-      dgConfig: requestPackages[0]?.packageSpecialServices,
-    });
-  }
-
   return {
     accountNumber: {
       value: accountNumber,
@@ -126,9 +119,9 @@ export function buildFedExRateRequest(
       },
       preferredCurrency: "USD",
       shipDateStamp,
-      pickupType: "DROPOFF_AT_FEDEX_LOCATION",
+      pickupType: "USE_SCHEDULED_PICKUP",
       packagingType: "YOUR_PACKAGING",
-      rateRequestType: ["LIST", "ACCOUNT"],
+      rateRequestType: ["ACCOUNT"],
       requestedPackageLineItems: requestPackages,
     },
   };

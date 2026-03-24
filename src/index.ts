@@ -12,10 +12,7 @@ app.get("/rates", handleTestRateRequest);
 app.post("/rates", handleRateRequest);
 
 app.onError((err, c) => {
-  console.error("Unhandled error", {
-    message: err.message,
-    stack: err.stack,
-  });
+  console.error("Unhandled error:", err.message, err.stack);
   return c.json({ error: "Internal server error" }, 500);
 });
 

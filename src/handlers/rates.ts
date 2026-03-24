@@ -28,6 +28,7 @@ import {
   formatDateISO,
   DEFAULT_HANDLING_DAYS,
 } from "../services/leadtimes";
+import { createLogger, type Logger } from "../services/logger";
 import type { ShopifyCartItem } from "../types";
 
 /**
@@ -247,7 +248,6 @@ export function handleTestRateRequest(c: Context<{ Bindings: Env }>): Response {
     );
   }
 
-  console.log("Test mode (GET/static) - returning dummy rates");
   return c.json({ rates: buildTestRates() }, 200);
 }
 
@@ -291,11 +291,12 @@ function buildTestRates(): ShopifyRate[] {
 export async function handleRateRequest(
   c: Context<{ Bindings: Env }>,
 ): Promise<Response> {
+  const useSandbox = c.env.FEDEX_SANDBOX === "true";
+  const logger = createLogger(useSandbox);
   const testParam = c.req.query("test");
 
   // Check for static test mode via query param (no payload needed)
   if (testParam === "true" || testParam === "static") {
-    console.log("Test mode (static) - returning dummy rates");
     return c.json({ rates: buildTestRates() }, 200);
   }
 
@@ -304,26 +305,22 @@ export async function handleRateRequest(
   try {
     request = await c.req.json<ShopifyRateRequest>();
   } catch (error) {
-    console.error("Failed to parse request body", error);
+    logger.error("Failed to parse request body", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return c.json({ rates: [] }, 200);
   }
+
+  logger.debugPayload("Shopify rate request", request);
 
   const items = request.rate.items;
   const testMode = getTestMode(testParam, items);
 
   if (testMode === "static") {
-    console.log("Test mode (static) triggered by cart item");
-    console.log("Full Shopify payload:", JSON.stringify(request, null, 2));
     return c.json({ rates: buildTestRates() }, 200);
   }
 
   const isDynamicTest = testMode === "dynamic";
-  if (isDynamicTest) {
-    console.log(
-      "Test mode (dynamic) - running full logic with mock FedEx rates",
-    );
-    console.log("Full Shopify payload:", JSON.stringify(request, null, 2));
-  }
 
   if (!hasShippableItems(items)) {
     return c.json({ rates: [] }, 200);
@@ -331,7 +328,7 @@ export async function handleRateRequest(
 
   const route = determineRoute(request, LOCAL_DELIVERY_ZIPS);
 
-  console.log("Rate request routing decision", {
+  logger.info("Rate request", {
     destinationZip: request.rate.destination.postal_code,
     destinationCountry: request.rate.destination.country,
     itemCount: items.length,
@@ -360,10 +357,6 @@ export async function handleRateRequest(
 
     if (isDynamicTest) {
       // Dynamic test mode: use mock FedEx rates
-      console.log("Using mock FedEx rates", {
-        packageCount: packages.length,
-        isInternational: route.isInternational,
-      });
       parsedRates = generateMockFedExRates(packages, route.isInternational);
     } else {
       // Production mode: call real FedEx API
@@ -381,20 +374,18 @@ export async function handleRateRequest(
         includeHazmat,
       );
 
-      console.log(
-        "Built FedEx rate request",
-        JSON.stringify(rateRequest, null, 2),
-      );
+      logger.debugPayload("FedEx rate request", rateRequest);
 
-      const useSandbox = c.env.FEDEX_SANDBOX === "true";
       const fedExResponse = await callFedExRateAPI(
         rateRequest,
         accessToken,
         useSandbox,
       );
 
+      logger.debugPayload("FedEx rate response", fedExResponse);
+
       if (fedExResponse.errors && fedExResponse.errors.length > 0) {
-        console.error("FedEx API returned errors", {
+        logger.error("FedEx API returned errors", {
           errors: fedExResponse.errors,
           destinationZip: request.rate.destination.postal_code,
         });
@@ -408,7 +399,7 @@ export async function handleRateRequest(
     }
 
     if (parsedRates.length === 0) {
-      console.warn("No valid FedEx rates returned", {
+      logger.warn("No valid FedEx rates returned", {
         destinationZip: request.rate.destination.postal_code,
         routeType: route.routeType,
       });
@@ -422,9 +413,12 @@ export async function handleRateRequest(
       defaultHandlingDays,
     );
 
-    return c.json({ rates: shopifyRates } as ShopifyRateResponse, 200);
+    const response = { rates: shopifyRates } as ShopifyRateResponse;
+    logger.debugPayload("Shopify rate response", response);
+
+    return c.json(response, 200);
   } catch (error) {
-    console.error("Failed to get FedEx rates", {
+    logger.error("Failed to get FedEx rates", {
       error: error instanceof Error ? error.message : String(error),
       destinationZip: request.rate.destination.postal_code,
       itemCount: items.length,
