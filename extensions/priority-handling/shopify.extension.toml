@@ -1,0 +1,10 @@
+api_version = "2024-04"
+
+[[extensions]]
+type = "ui_extension"
+name = "Priority Handling"
+handle = "priority-handling"
+
+[[extensions.targeting]]
+module = "./src/Checkout.tsx"
+target = "purchase.checkout.shipping-option-list.render-before"

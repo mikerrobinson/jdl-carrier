@@ -42,6 +42,16 @@ function hasHazmatItems(items: ShopifyCartItem[]): boolean {
   });
 }
 
+/**
+ * Check if priority handling was selected in checkout
+ * Looks for _priority_handling property on any cart item
+ */
+function hasPriorityHandling(items: ShopifyCartItem[]): boolean {
+  return items.some((item) => {
+    return item.properties?._priority_handling === "true";
+  });
+}
+
 function getDefaultHandlingDays(env: Env): number {
   if (env.DEFAULT_HANDLING_DAYS) {
     const parsed = parseInt(env.DEFAULT_HANDLING_DAYS, 10);
@@ -99,6 +109,7 @@ function fedExRatesToShopifyRates(
   fedExRates: ParsedFedExRate[],
   request: ShopifyRateRequest,
   defaultHandlingDays: number,
+  isPriority: boolean,
 ): ShopifyRate[] {
   const rates: ShopifyRate[] = [];
   const items = request.rate.items;
@@ -109,13 +120,17 @@ function fedExRatesToShopifyRates(
       ? HANDLING_FEES_CENTS.ground_per_order
       : HANDLING_FEES_CENTS.air_per_order;
 
-    const totalPriceCents = fedExRate.totalChargeCents + handlingFee;
+    let totalPriceCents = fedExRate.totalChargeCents + handlingFee;
 
-    const standardDates = calculateDeliveryDates(
+    if (isPriority) {
+      totalPriceCents += PRIORITY_FEE_CENTS;
+    }
+
+    const deliveryDates = calculateDeliveryDates(
       items,
       fedExRate.transitDays,
       defaultHandlingDays,
-      false,
+      isPriority,
     );
 
     rates.push({
@@ -123,28 +138,8 @@ function fedExRatesToShopifyRates(
       service_code: fedExRate.serviceType,
       total_price: totalPriceCents.toString(),
       currency: "USD",
-      min_delivery_date: standardDates.minDeliveryDateISO,
-      max_delivery_date: standardDates.maxDeliveryDateISO,
-    });
-
-    const priorityDates = calculateDeliveryDates(
-      items,
-      fedExRate.transitDays,
-      defaultHandlingDays,
-      true,
-    );
-
-    const priorityTotalCents = totalPriceCents + PRIORITY_FEE_CENTS;
-
-    rates.push({
-      service_name: `${fedExRate.serviceName} — Priority Handling`,
-      service_code: `${fedExRate.serviceType}_PRIORITY`,
-      total_price: priorityTotalCents.toString(),
-      description:
-        "Order moved to front of fulfillment queue — ships within 1 business day",
-      currency: "USD",
-      min_delivery_date: priorityDates.minDeliveryDateISO,
-      max_delivery_date: priorityDates.maxDeliveryDateISO,
+      min_delivery_date: deliveryDates.minDeliveryDateISO,
+      max_delivery_date: deliveryDates.maxDeliveryDateISO,
     });
   }
 
@@ -438,10 +433,12 @@ export async function handleRateRequest(
     }
 
     const defaultHandlingDays = getDefaultHandlingDays(c.env);
+    const isPriority = hasPriorityHandling(items);
     const shopifyRates = fedExRatesToShopifyRates(
       parsedRates,
       request,
       defaultHandlingDays,
+      isPriority,
     );
 
     return c.json({ rates: shopifyRates } as ShopifyRateResponse, 200);

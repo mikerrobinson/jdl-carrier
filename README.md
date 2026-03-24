@@ -38,7 +38,7 @@ npx wrangler secret put FEDEX_SANDBOX ('true' to use Fedex sandbox APIs)
 
 ### 3. Update Configuration (if needed)
 
-Edit `src/config/config.ts` to update box sizes, handling fees, or local delivery zip codes.
+Edit `src/config.ts` to update box sizes, handling fees, or local delivery zip codes.
 
 ## Development
 
@@ -129,6 +129,17 @@ Shopify carrier service callback.
 
 Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
 
+## Priority Handling Extension
+
+A Shopify checkout UI extension is included in `extensions/priority-handling/`. This adds a checkbox to checkout that enables priority handling.
+
+When a customer checks the box:
+1. `_priority_handling: "true"` is added to all cart line items
+2. The carrier service detects this and adds $30 to all shipping rates
+3. Delivery dates reflect expedited fulfillment (ships within 1 business day)
+
+See `extensions/priority-handling/README.md` for deployment instructions.
+
 ## Project Structure
 
 ```
@@ -147,6 +158,8 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
     shopify.ts             # Shopify types
     fedex.ts               # FedEx API types
     config.ts              # Configuration types
+/extensions
+  /priority-handling       # Checkout UI extension for priority handling option
 ```
 
 ## Handling Fees
@@ -158,6 +171,4 @@ Health check endpoint. Returns `{ "status": "ok", "timestamp": "..." }`.
 ## Error Handling
 
 - FedEx API errors or timeouts → HTTP 500 (triggers Shopify fallback rates)
-- Invalid HMAC signature → HTTP 401
 - No shippable items → HTTP 200 with empty rates array
-- KV config errors → Uses hardcoded defaults with logged warning
