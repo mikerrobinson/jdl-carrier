@@ -157,11 +157,18 @@ function fedExRatesToShopifyRates(
 
     const totalPriceCents = fedExRate.totalChargeCents + handlingFee;
 
-    const deliveryDates = calculateDeliveryDates(
-      items,
-      fedExRate.transitDays,
-      defaultHandlingDays,
-    );
+    // Use FedEx-provided delivery date if available, otherwise calculate from transit days
+    let deliveryDateISO: string;
+    if (fedExRate.deliveryDate) {
+      deliveryDateISO = fedExRate.deliveryDate;
+    } else {
+      const deliveryDates = calculateDeliveryDates(
+        items,
+        fedExRate.transitDays,
+        defaultHandlingDays,
+      );
+      deliveryDateISO = deliveryDates.minDeliveryDateISO;
+    }
 
     // Build description parts
     const descriptionParts: string[] = [];
@@ -183,8 +190,8 @@ function fedExRatesToShopifyRates(
       service_code: fedExRate.serviceType,
       total_price: totalPriceCents.toString(),
       currency: "USD",
-      min_delivery_date: deliveryDates.minDeliveryDateISO,
-      max_delivery_date: deliveryDates.maxDeliveryDateISO,
+      min_delivery_date: deliveryDateISO,
+      max_delivery_date: deliveryDateISO,
     };
 
     if (descriptionParts.length > 0) {
